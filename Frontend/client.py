@@ -185,7 +185,7 @@ def open_main_window():
     feed_tab.grid_rowconfigure(1, weight=0)     # Button row
 
     # Feed Scrollable Area (left side)
-    feed_scroll = ctk.CTkScrollableFrame(feed_tab, fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
+    feed_scroll = ctk.CTkScrollableFrame(feed_tab, fg_color="#2E2E2E" if not dark_mode else "#2E2E2E")
     feed_scroll.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
 
     def load_feed():
@@ -195,7 +195,7 @@ def open_main_window():
             for widget in feed_scroll.winfo_children():
                 widget.destroy()
             for post in posts:
-                post_frame = ctk.CTkFrame(feed_scroll, fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
+                post_frame = ctk.CTkFrame(feed_scroll , fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
                 post_frame.pack(fill="x", pady=10)
 
                 # Image
@@ -205,7 +205,7 @@ def open_main_window():
                 img = img.resize((200, 200), Image.LANCZOS)
                 img_tk = ctk.CTkImage(img, size=(200, 200))
                 img_label = ctk.CTkLabel(post_frame, image=img_tk, text="")
-                img_label.pack(side="left", padx=10)
+                img_label.pack(side="left", padx=10 )
 
                 # Post info
                 info_frame = ctk.CTkFrame(post_frame)
@@ -286,7 +286,7 @@ def open_main_window():
             messagebox.showerror("Error", response.json()["message"])
 
     # You Might Like Section (right side)
-    rec_frame = ctk.CTkFrame(feed_tab, fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
+    rec_frame = ctk.CTkFrame(feed_tab, fg_color="#2E2E2E" if not dark_mode else "#2E2E2E")
     rec_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
     rec_frame.grid_rowconfigure(0, weight=0)  # Title row
     rec_frame.grid_rowconfigure(1, weight=1)  # Scrollable area
