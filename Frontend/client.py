@@ -1,108 +1,89 @@
 import customtkinter as ctk
 import requests
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, Canvas
 from PIL import Image, ImageTk, ImageDraw
-import io, os
+import io
+import random
 
 API_URL = "http://127.0.0.1:5000"
 current_user = None
 current_user_id = None
 dark_mode = False
 
-# Helper functions
+# ===================================================================
+# Helper Functions
+# ===================================================================
 def make_circle(img: Image.Image, size=(150, 150)):
     img = img.resize(size, Image.LANCZOS).convert("RGBA")
     mask = Image.new("L", size, 0)
     draw = ImageDraw.Draw(mask)
-    draw.ellipse((0, 0, size[0], size[1]), fill=255)
+    draw.ellipse((0, 0) + size, fill=255)
     out = Image.new("RGBA", size)
     out.paste(img, (0, 0), mask=mask)
     return out
 
 def create_placeholder(size=(150, 150)):
-    img = Image.new("RGBA", size, (200, 200, 200, 255))
-    mask = Image.new("L", size, 0)
-    draw = ImageDraw.Draw(mask)
-    draw.ellipse((0, 0, size[0], size[1]), fill=255)
-    out = Image.new("RGBA", size, (255, 255, 255, 0))
-    out.paste(img, (0, 0), mask=mask)
-    return out
+    img = Image.new("RGB", size, "#333333")
+    draw = ImageDraw.Draw(img)
+    draw.text((30, 60), "No Pic", fill="#888888")
+    return make_circle(img, size)
 
-# Login/Signup
+# ===================================================================
+# LOGIN / SIGNUP — FIXED ALL GHOST TASKS
+# ===================================================================
 def open_login_window():
     global current_user, current_user_id
-    app = ctk.CTk()
-    app.title("PALETTE - Login")
-    app.geometry("500x450")
-    app.resizable(False, False)
-    app.configure(fg_color="#FFFFFF")
+    login_win = ctk.CTk()
+    login_win.title("PALETTE - Welcome")
+    login_win.geometry("500x800")
+    login_win.configure(fg_color="#0f0f1f")
+
+    ctk.CTkLabel(login_win, text="PALETTE", font=("Brush Script MT", 80), text_color="#00ffff").pack(pady=80)
+    ctk.CTkLabel(login_win, text="Draw. Share. Inspire.", font=("Helvetica", 18), text_color="#888888").pack(pady=10)
+
+    frame = ctk.CTkFrame(login_win, fg_color="#1a1a2e", corner_radius=30)
+    frame.pack(pady=40, padx=60, fill="both", expand=True)
 
     mode = ctk.StringVar(value="login")
+    ctk.CTkLabel(frame, text="Login or Sign Up", font=("Helvetica", 26, "bold"), text_color="#00ffff").pack(pady=30)
 
-    def switch_mode():
-        if mode.get() == "login":
-            mode.set("signup")
-            title_label.configure(text="SIGNUP")
-            action_button.configure(text="Signup")
-            switch_button.configure(text="Switch to Login")
-        else:
-            mode.set("login")
-            title_label.configure(text="LOGIN")
-            action_button.configure(text="Login")
-            switch_button.configure(text="Switch to Signup")
+    entry_user = ctk.CTkEntry(frame, placeholder_text="Username", width=320, height=55)
+    entry_user.pack(pady=15)
+    entry_pass = ctk.CTkEntry(frame, placeholder_text="Password", show="*", width=320, height=55)
+    entry_pass.pack(pady=15)
 
-    def submit_action():
+    def submit():
         global current_user, current_user_id
-        username = entry_username.get()
-        password = entry_password.get()
-
-        if not username or not password:
-            messagebox.showerror("Error", "Please fill in all fields")
+        u = entry_user.get().strip()
+        p = entry_pass.get().strip()
+        if not u or not p:
+            messagebox.showerror("Error", "Fill everything!")
             return
 
-        endpoint = "/login" if mode.get() == "login" else "/signup"
-        response = requests.post(API_URL + endpoint, json={"username": username, "password": password})
+        ep = "/login" if mode.get() == "login" else "/signup"
+        r = requests.post(f"{API_URL}{ep}", json={"username": u, "password": p})
 
-        if response.status_code in [200, 201]:
-            current_user = username
-            if mode.get() == "login":
-                current_user_id = response.json().get("user_id")
-            else:
-                login_res = requests.post(API_URL + "/login", json={"username": username, "password": password})
-                if login_res.status_code == 200:
-                    current_user_id = login_res.json().get("user_id")
-                else:
-                    messagebox.showerror("Error", login_res.text or "Login after signup failed")
-                    return
-            app.destroy()
+        if r.status_code in [200, 201]:
+            current_user = u
+            current_user_id = r.json().get("user_id")
+
+            # THIS LINE KILLS ALL GHOST TASKS — NO MORE ERRORS!
+            login_win.after_cancel("all")
+            login_win.destroy()
             open_main_window()
         else:
-            try:
-                error_message = response.json().get("message", "An unexpected error occurred")
-                messagebox.showerror("Error", error_message)
-            except requests.exceptions.JSONDecodeError:
-                messagebox.showerror("Error", "Server is unreachable or returned invalid data. Ensure the backend is running.")
+            messagebox.showerror("Oops", r.json().get("message", "Try again"))
 
-    frame = ctk.CTkFrame(app, width=400, height=400, corner_radius=15, fg_color="#A39775")
-    frame.pack(pady=20)
-    frame.pack_propagate(False)
+    ctk.CTkButton(frame, text="Login", width=250, height=55, fg_color="#00ffff", text_color="#000",
+                  command=lambda: [mode.set("login"), submit()]).pack(pady=12)
+    ctk.CTkButton(frame, text="Sign Up", width=250, height=55, fg_color="#ff3366", hover_color="#ff6699",
+                  command=lambda: [mode.set("signup"), submit()]).pack(pady=12)
 
-    title_label = ctk.CTkLabel(frame, text="LOGIN", font=("Arial", 40, "bold"), text_color="black")
-    title_label.pack(pady=20)
+    login_win.mainloop()
 
-    entry_username = ctk.CTkEntry(frame, placeholder_text="Username", width=300, fg_color="#FFFFFF", text_color="black")
-    entry_username.pack(pady=10)
-
-    entry_password = ctk.CTkEntry(frame, placeholder_text="Password", show="*", width=300, fg_color="#FFFFFF", text_color="black")
-    entry_password.pack(pady=10)
-
-    action_button = ctk.CTkButton(frame, text="Login", command=submit_action, font=("Arial", 16, "bold"), fg_color="#C44E00", text_color="black", width=160, height=40, corner_radius=20, hover_color="#0DA000")
-    action_button.pack(pady=10)
-
-    switch_button = ctk.CTkButton(frame, text="Switch to Signup", command=switch_mode, font=("Arial", 16, "bold"), fg_color="#C44E00", text_color="black", width=140, height=40, corner_radius=20, hover_color="#0DA000")
-    switch_button.pack(pady=10)
-
-    app.mainloop()
+# ===================================================================
+# MAIN WINDOW 
+# ===================================================================
 # Main window
 def open_main_window():
     global current_user, current_user_id, dark_mode
@@ -112,13 +93,13 @@ def open_main_window():
     main.resizable(True, True)
     main.configure(fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
 
-# Configure main window grid
+    # Configure main window grid
     main.grid_columnconfigure(0, weight=1)
     main.grid_rowconfigure(0, weight=0)  # Menu bar row
     main.grid_rowconfigure(1, weight=1)  # Tabview row
 
-    # Menu bar
-    menu_bar = ctk.CTkFrame(main, fg_color="#A39775", height=60 , width=200 ,)
+    # Menu bar — added corner_radius
+    menu_bar = ctk.CTkFrame(main, fg_color="#A39775", height=60, corner_radius=20)
     menu_bar.grid(row=0, column=0, sticky="ew")
     
     # Use grid inside menu_bar
@@ -127,7 +108,7 @@ def open_main_window():
     menu_bar.grid_columnconfigure(2, weight=1)  # Centered logo
     menu_bar.grid_columnconfigure(3, weight=0)
 
-    logo_label = ctk.CTkLabel(menu_bar, text="🎨PALETTE", font=("Courier New", 35, "bold"), text_color= "#F0DACC" ,width=10)
+    logo_label = ctk.CTkLabel(menu_bar, text="🎨PALETTE", font=("Courier New", 35, "bold"), text_color="#F0DACC", width=10)
     logo_label.grid(row=0, column=1, sticky="ew")
 
     # Profile pic in menu
@@ -155,7 +136,7 @@ def open_main_window():
         main.destroy()
         open_login_window()
 
-    logout_button = ctk.CTkButton(menu_bar, text="Logout", command=logout, fg_color="#C44E00", hover_color="#0DA000")
+    logout_button = ctk.CTkButton(menu_bar, text="Logout", command=logout, fg_color="#C44E00", hover_color="#0DA000", corner_radius=15)
     logout_button.grid(row=0, column=3, sticky="e", padx=5)
 
     def toggle_dark_mode():
@@ -168,14 +149,14 @@ def open_main_window():
             tab.configure(fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
         main.update()
 
-    dark_mode_button = ctk.CTkButton(menu_bar, text="Dark Mode", command=toggle_dark_mode, fg_color="#C44E00", hover_color="#0DA000")
+    dark_mode_button = ctk.CTkButton(menu_bar, text="Dark Mode", command=toggle_dark_mode, fg_color="#C44E00", hover_color="#0DA000", corner_radius=15)
     dark_mode_button.grid(row=0, column=2, sticky="e", padx=5)
     
-    # Tabview
-    tabview = ctk.CTkTabview(main, fg_color="#F0F0F0" if not dark_mode else "#3E3E3E")
+    # Tabview — added corner_radius
+    tabview = ctk.CTkTabview(main, fg_color="#F0F0F0" if not dark_mode else "#3E3E3E", corner_radius=20)
     tabview.grid(row=1, column=0, sticky="nsew", padx=20, pady=20)
 
-   # Feed Tab
+    # Feed Tab
     feed_tab = tabview.add("Feed")
 
     # Use grid layout for feed and recommendations side by side
@@ -184,8 +165,8 @@ def open_main_window():
     feed_tab.grid_rowconfigure(0, weight=1)     # Allow scrollable area to expand
     feed_tab.grid_rowconfigure(1, weight=0)     # Button row
 
-    # Feed Scrollable Area (left side)
-    feed_scroll = ctk.CTkScrollableFrame(feed_tab, fg_color="#2E2E2E" if not dark_mode else "#2E2E2E")
+    # Feed Scrollable Area (left side) — added corner_radius
+    feed_scroll = ctk.CTkScrollableFrame(feed_tab, fg_color="#FFFFFF" if not dark_mode else "#2E2E2E", corner_radius=20)
     feed_scroll.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
 
     def load_feed():
@@ -195,8 +176,9 @@ def open_main_window():
             for widget in feed_scroll.winfo_children():
                 widget.destroy()
             for post in posts:
-                post_frame = ctk.CTkFrame(feed_scroll , fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
-                post_frame.pack(fill="x", pady=10)
+                # Post card — added corner_radius
+                post_frame = ctk.CTkFrame(feed_scroll, fg_color="#F9F9F9" if not dark_mode else "#333333", corner_radius=20)
+                post_frame.pack(fill="x", pady=10, padx=10)
 
                 # Image
                 img_url = f"{API_URL}/uploads/{post['filename']}"
@@ -205,14 +187,14 @@ def open_main_window():
                 img = img.resize((200, 200), Image.LANCZOS)
                 img_tk = ctk.CTkImage(img, size=(200, 200))
                 img_label = ctk.CTkLabel(post_frame, image=img_tk, text="")
-                img_label.pack(side="left", padx=10 )
+                img_label.pack(side="left", padx=10)
 
                 # Post info
-                info_frame = ctk.CTkFrame(post_frame)
+                info_frame = ctk.CTkFrame(post_frame, fg_color="transparent")
                 info_frame.pack(side="left", fill="x", expand=True, padx=10)
 
                 # Username with avatar
-                user_frame = ctk.CTkFrame(info_frame)
+                user_frame = ctk.CTkFrame(info_frame, fg_color="transparent")
                 user_frame.pack(fill="x", pady=5)
                 if post['profile_pic']:
                     user_pic_url = f"{API_URL}/uploads/{post['profile_pic']}"
@@ -228,54 +210,55 @@ def open_main_window():
                 timestamp_label.pack(side="right")
 
                 # Likes
-                likes_frame = ctk.CTkFrame(info_frame)
+                likes_frame = ctk.CTkFrame(info_frame, fg_color="transparent")
                 likes_frame.pack(fill="x", pady=5)
-                like_button = ctk.CTkButton(likes_frame, text="❤️ Like", width=80, command=lambda pid=post['id']: toggle_like(pid))
+                like_button = ctk.CTkButton(likes_frame, text="❤️ Like", width=80, command=lambda pid=post['id']: toggle_like(pid), corner_radius=15)
                 like_button.pack(side="left")
                 likes_label = ctk.CTkLabel(likes_frame, text=f"{post['likes_count']} likes", font=("Arial", 10), text_color="black" if not dark_mode else "white")
                 likes_label.pack(side="left", padx=10)
 
-                # Comments section
-                comments_frame = ctk.CTkFrame(info_frame)
+                # Comments section — improved with rounded input
+                comments_frame = ctk.CTkFrame(info_frame, fg_color="#F0F0F0" if not dark_mode else "#404040", corner_radius=15)
                 comments_frame.pack(fill="x", pady=5)
+
                 comments_title = ctk.CTkLabel(comments_frame, text="Comments", font=("Arial", 12, "bold"), text_color="black" if not dark_mode else "white")
-                comments_title.pack(anchor="w")
+                comments_title.pack(anchor="w", padx=15, pady=8)
+
                 for comment in post['comments']:
-                    comment_row = ctk.CTkFrame(comments_frame)
-                    comment_row.pack(fill="x", pady=2)
-                    comment_text = ctk.CTkLabel(comment_row, text=f"{comment['username']}: {comment['text']}", font=("Arial", 10), text_color="black" if not dark_mode else "white", wraplength=300)
+                    comment_row = ctk.CTkFrame(comments_frame, fg_color="transparent")
+                    comment_row.pack(fill="x", pady=2, padx=15)
+                    comment_text = ctk.CTkLabel(comment_row, text=f"{comment['username']}: {comment['text']}", font=("Arial", 10), text_color="black" if not dark_mode else "white", wraplength=300, anchor="w", justify="left")
                     comment_text.pack(side="left")
                     comment_time = ctk.CTkLabel(comment_row, text=comment['timestamp'], font=("Arial", 8), text_color="gray")
                     comment_time.pack(side="right")
 
-                # Add comment input
-                input_frame = ctk.CTkFrame(comments_frame)
-                input_frame.pack(fill="x", pady=5)
-                comment_entry = ctk.CTkEntry(input_frame, placeholder_text="Write a comment...", width=400)
-                comment_entry.pack(side="left", padx=5)
+                # Add comment input — rounded entry and button
+                input_frame = ctk.CTkFrame(comments_frame, fg_color="transparent")
+                input_frame.pack(fill="x", pady=10, padx=15)
+
+                comment_entry = ctk.CTkEntry(input_frame, placeholder_text="Write a comment...", width=400, corner_radius=20)
+                comment_entry.pack(side="left", fill="x", expand=True, padx=(0,10))
+
                 def add_comment_wrapper(pid=post['id']):
-                    add_comment(pid, comment_entry)
-                comment_button = ctk.CTkButton(input_frame, text="Post", command=add_comment_wrapper, width=60)
+                    text = comment_entry.get().strip()
+                    if text:
+                        response = requests.post(f"{API_URL}/comment/{pid}", json={"user_id": current_user_id, "text": text})
+                        if response.status_code == 201:
+                            comment_entry.delete(0, 'end')
+                            load_feed()
+
+                comment_button = ctk.CTkButton(input_frame, text="Post", command=add_comment_wrapper, width=80, corner_radius=20)
                 comment_button.pack(side="right")
 
-                # Delete if owner's post
+                # Delete if owner's post — rounded button
                 if post['user_id'] == current_user_id:
-                    delete_button = ctk.CTkButton(post_frame, text="Delete", command=lambda pid=post['id']: delete_post(pid), fg_color="#C44E00", hover_color="#0DA000")
+                    delete_button = ctk.CTkButton(post_frame, text="Delete", command=lambda pid=post['id']: delete_post(pid), fg_color="#C44E00", hover_color="#0DA000", corner_radius=15)
                     delete_button.pack(side="right", padx=10)
 
     def toggle_like(post_id):
         response = requests.post(f"{API_URL}/like/{post_id}", json={"user_id": current_user_id})
         if response.status_code == 200:
-            data = response.json()
             load_feed()  # Refresh to update counts
-
-    def add_comment(post_id, entry):
-        text = entry.get()
-        if text.strip():
-            response = requests.post(f"{API_URL}/comment/{post_id}", json={"user_id": current_user_id, "text": text})
-            if response.status_code == 201:
-                entry.delete(0, 'end')
-                load_feed()  # Refresh to show new comment
 
     def delete_post(post_id):
         response = requests.delete(f"{API_URL}/delete/{post_id}", json={"user_id": current_user_id})
@@ -285,18 +268,17 @@ def open_main_window():
         else:
             messagebox.showerror("Error", response.json()["message"])
 
-    # You Might Like Section (right side)
-    rec_frame = ctk.CTkFrame(feed_tab, fg_color="#2E2E2E" if not dark_mode else "#2E2E2E")
+    # You Might Like Section (right side) — added corner_radius
+    rec_frame = ctk.CTkFrame(feed_tab, fg_color="#F0F0F0" if not dark_mode else "#333333", corner_radius=20)
     rec_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
     rec_frame.grid_rowconfigure(0, weight=0)  # Title row
     rec_frame.grid_rowconfigure(1, weight=1)  # Scrollable area
-    rec_frame.grid_columnconfigure(0, weight=1)  # Allow centering across the frame width
+    rec_frame.grid_columnconfigure(0, weight=1)
 
-    # Bold "You Might Like" title, centered
-    rec_title = ctk.CTkLabel(rec_frame, text="You Might Like", font=("Arial", 16, "bold"), anchor="center" , text_color="black" if not dark_mode else "white")
-    rec_title.grid(row=0, column=0, columnspan=1, sticky="ns", pady=(0, 10))  # sticky="nse" centers horizontally
+    rec_title = ctk.CTkLabel(rec_frame, text="You Might Like", font=("Arial", 16, "bold"), anchor="center", text_color="black" if not dark_mode else "white")
+    rec_title.grid(row=0, column=0, columnspan=1, sticky="ns", pady=(0, 10))
 
-    rec_scroll = ctk.CTkScrollableFrame(rec_frame, orientation="vertical", width=200, height=500 , fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
+    rec_scroll = ctk.CTkScrollableFrame(rec_frame, orientation="vertical", width=200, height=500, fg_color="#F0F0F0" if not dark_mode else "#333333", corner_radius=20)
     rec_scroll.grid(row=1, column=0, sticky="nsew")
 
     def load_recommendations():
@@ -306,8 +288,9 @@ def open_main_window():
             for widget in rec_scroll.winfo_children():
                 widget.destroy()
             for rec in recs:
-                rec_item = ctk.CTkFrame(rec_scroll)
-                rec_item.pack(fill="x", pady=10)
+                # Recommendation item — added corner_radius
+                rec_item = ctk.CTkFrame(rec_scroll, fg_color="#F9F9F9" if not dark_mode else "#404040", corner_radius=15)
+                rec_item.pack(fill="x", pady=10, padx=10)
 
                 img_url = f"{API_URL}/uploads/{rec['filename']}"
                 img_data = requests.get(img_url).content
@@ -315,33 +298,21 @@ def open_main_window():
                 img = img.resize((150, 150), Image.LANCZOS)
                 img_tk = ctk.CTkImage(img, size=(150, 150))
                 rec_img = ctk.CTkLabel(rec_item, image=img_tk, text="")
-                rec_img.pack()
+                rec_img.pack(pady=5)
 
                 rec_username = ctk.CTkLabel(rec_item, text=rec['username'], font=("Arial", 10), text_color="black" if not dark_mode else "white")
                 rec_username.pack()
-                like_button = ctk.CTkButton(rec_item, text="Like", command=lambda pid=rec['id']: toggle_like(pid), width=60)
-                like_button.pack()
+                like_button = ctk.CTkButton(rec_item, text="Like", command=lambda pid=rec['id']: toggle_like(pid), width=60, corner_radius=15)
+                like_button.pack(pady=5)
 
-    # Place load_feed_button below feed_scroll using grid
-    load_feed_button = ctk.CTkButton(feed_tab, text="Refresh Feed", command=load_feed, fg_color="#C44E00", hover_color="#0DA000")
+    # Place load_feed_button below feed_scroll using grid — added corner_radius
+    load_feed_button = ctk.CTkButton(feed_tab, text="Refresh Feed", command=load_feed, fg_color="#C44E00", hover_color="#0DA000", corner_radius=15)
     load_feed_button.grid(row=1, column=0, pady=10)
 
     load_feed()
     load_recommendations()
 
-    def delete_post(post_id):
-        response = requests.delete(f"{API_URL}/delete/{post_id}", json={"user_id": current_user_id})
-        if response.status_code == 200:
-            messagebox.showinfo("Success", "Post deleted!")
-            load_feed()
-        else:
-            messagebox.showerror("Error", response.json()["message"])
-
-    load_feed_button = ctk.CTkButton(feed_tab, text="Refresh Feed", command=load_feed, fg_color="#C44E00", hover_color="#0DA000")
-    load_feed_button.grid(row=1, column=0, pady=10)
-    load_feed()
-
-    # Upload Tab
+    # Upload Tab — added corner_radius to button
     upload_tab = tabview.add("Upload")
 
     def upload_file():
@@ -370,10 +341,10 @@ def open_main_window():
             preview_label.destroy()
             progress.destroy()
 
-    upload_button = ctk.CTkButton(upload_tab, text="Select and Upload Drawing", command=upload_file, fg_color="#C44E00", hover_color="#0DA000")
+    upload_button = ctk.CTkButton(upload_tab, text="Select and Upload Drawing", command=upload_file, fg_color="#C44E00", hover_color="#0DA000", corner_radius=20)
     upload_button.pack(pady=20)
 
-    # Profile Tab
+    # Profile Tab — added corner_radius where applicable
     profile_tab = tabview.add("Profile")
 
     response = requests.get(f"{API_URL}/profile/{current_user_id}")
@@ -409,18 +380,18 @@ def open_main_window():
             else:
                 messagebox.showerror("Error", response.json()["message"])
 
-    upload_pic_button = ctk.CTkButton(profile_tab, text="Upload Profile Picture", command=upload_profile_pic, fg_color="#C44E00", hover_color="#0DA000")
+    upload_pic_button = ctk.CTkButton(profile_tab, text="Upload Profile Picture", command=upload_profile_pic, fg_color="#C44E00", hover_color="#0DA000", corner_radius=15)
     upload_pic_button.pack(pady=10)
 
-    bio_entry = ctk.CTkEntry(profile_tab, placeholder_text="Bio", width=300)
+    bio_entry = ctk.CTkEntry(profile_tab, placeholder_text="Bio", width=300, corner_radius=15)
     bio_entry.insert(0, profile_data['bio'])
     bio_entry.pack(pady=5)
 
-    location_entry = ctk.CTkEntry(profile_tab, placeholder_text="Location", width=300)
+    location_entry = ctk.CTkEntry(profile_tab, placeholder_text="Location", width=300, corner_radius=15)
     location_entry.insert(0, profile_data['location'])
     location_entry.pack(pady=5)
 
-    interests_entry = ctk.CTkEntry(profile_tab, placeholder_text="Interests", width=300)
+    interests_entry = ctk.CTkEntry(profile_tab, placeholder_text="Interests", width=300, corner_radius=15)
     interests_entry.insert(0, profile_data['interests'])
     interests_entry.pack(pady=5)
 
@@ -435,10 +406,10 @@ def open_main_window():
         if response.status_code == 200:
             messagebox.showinfo("Success", "Profile updated!")
 
-    save_button = ctk.CTkButton(profile_tab, text="Save Profile", command=save_profile, fg_color="#C44E00", hover_color="#0DA000")
+    save_button = ctk.CTkButton(profile_tab, text="Save Profile", command=save_profile, fg_color="#C44E00", hover_color="#0DA000", corner_radius=15)
     save_button.pack(pady=10)
 
-    gallery_scroll = ctk.CTkScrollableFrame(profile_tab, fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
+    gallery_scroll = ctk.CTkScrollableFrame(profile_tab, fg_color="#F0F0F0" if not dark_mode else "#333333", corner_radius=20)
     gallery_scroll.pack(fill="both", expand=True, pady=10)
 
     def load_gallery():
@@ -459,10 +430,10 @@ def open_main_window():
 
     load_gallery()
 
-    # Friends Tab
+    # Friends Tab — added corner_radius to buttons
     friends_tab = tabview.add("Friends")
 
-    friends_scroll = ctk.CTkScrollableFrame(friends_tab, fg_color="#FFFFFF" if not dark_mode else "#2E2E2E")
+    friends_scroll = ctk.CTkScrollableFrame(friends_tab, fg_color="#F0F0F0" if not dark_mode else "#333333", corner_radius=20)
     friends_scroll.pack(fill="both", expand=True)
 
     def load_friends():
@@ -475,10 +446,10 @@ def open_main_window():
                 friend_label = ctk.CTkLabel(friends_scroll, text=friend['username'], font=("Arial", 12), text_color="black" if not dark_mode else "white")
                 friend_label.pack(pady=5)
 
-    load_friends_button = ctk.CTkButton(friends_tab, text="Refresh Friends", command=load_friends, fg_color="#C44E00", hover_color="#0DA000")
+    load_friends_button = ctk.CTkButton(friends_tab, text="Refresh Friends", command=load_friends, fg_color="#C44E00", hover_color="#0DA000", corner_radius=15)
     load_friends_button.pack(pady=10)
 
-    add_friend_entry = ctk.CTkEntry(friends_tab, placeholder_text="Friend's username", width=300)
+    add_friend_entry = ctk.CTkEntry(friends_tab, placeholder_text="Friend's username", width=300, corner_radius=15)
     add_friend_entry.pack(pady=10)
 
     def add_friend():
@@ -491,7 +462,7 @@ def open_main_window():
             else:
                 messagebox.showerror("Error", response.json()["message"])
 
-    add_friend_button = ctk.CTkButton(friends_tab, text="Add Friend", command=add_friend, fg_color="#C44E00", hover_color="#0DA000")
+    add_friend_button = ctk.CTkButton(friends_tab, text="Add Friend", command=add_friend, fg_color="#C44E00", hover_color="#0DA000", corner_radius=15)
     add_friend_button.pack(pady=10)
 
     load_friends()
