@@ -37,19 +37,21 @@ def open_login_window():
     login_win.title("PALETTE - Welcome")
     login_win.geometry("500x800")
     login_win.configure(fg_color="#0f0f1f")
+    login_win.resizable(False, False)
 
     ctk.CTkLabel(login_win, text="PALETTE", font=("Brush Script MT", 80), text_color="#00ffff").pack(pady=80)
     ctk.CTkLabel(login_win, text="Draw. Share. Inspire.", font=("Helvetica", 18), text_color="#888888").pack(pady=10)
 
     frame = ctk.CTkFrame(login_win, fg_color="#1a1a2e", corner_radius=30)
     frame.pack(pady=40, padx=60, fill="both", expand=True)
+    frame.configure(border_width=2, border_color="#00ffff")
 
     mode = ctk.StringVar(value="login")
     ctk.CTkLabel(frame, text="Login or Sign Up", font=("Helvetica", 26, "bold"), text_color="#00ffff").pack(pady=30)
 
-    entry_user = ctk.CTkEntry(frame, placeholder_text="Username", width=320, height=55)
+    entry_user = ctk.CTkEntry(frame, placeholder_text="Username", width=320, height=55 , corner_radius= 30)
     entry_user.pack(pady=15)
-    entry_pass = ctk.CTkEntry(frame, placeholder_text="Password", show="*", width=320, height=55)
+    entry_pass = ctk.CTkEntry(frame, placeholder_text="Password", show="*", width=320, height=55 ,corner_radius=30)
     entry_pass.pack(pady=15)
 
     def submit():
@@ -75,9 +77,9 @@ def open_login_window():
             messagebox.showerror("Oops", r.json().get("message", "Try again"))
 
     ctk.CTkButton(frame, text="Login", width=250, height=55, fg_color="#00ffff", text_color="#000",
-                  command=lambda: [mode.set("login"), submit()]).pack(pady=12)
+                  command=lambda: [mode.set("login"), submit()], corner_radius= 25 ).pack(pady=12)
     ctk.CTkButton(frame, text="Sign Up", width=250, height=55, fg_color="#ff3366", hover_color="#ff6699",
-                  command=lambda: [mode.set("signup"), submit()]).pack(pady=12)
+                  command=lambda: [mode.set("signup"), submit()], corner_radius=25 ).pack(pady=12)
 
     login_win.mainloop()
 
