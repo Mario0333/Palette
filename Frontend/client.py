@@ -10,6 +10,12 @@ current_user = None
 current_user_id = None
 dark_mode = False
 
+
+import os
+from PIL import Image, ImageTk
+
+
+
 # ===================================================================
 # Helper Functions
 # ===================================================================
@@ -38,6 +44,14 @@ def open_login_window():
     login_win.geometry("500x815")
     login_win.configure(fg_color="#0f0f1f")
     login_win.resizable(False, False)
+    login_win.iconbitmap("Assets/palette_icon.ico")
+
+    #Changing the taskbar icon on Windows
+    if os.name == 'nt':
+        import ctypes
+        myappid = 'mycompany.myproduct.subproduct.version'  # arbitrary string
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        
 
     ctk.CTkLabel(login_win, text="PALETTE", font=("Brush Script MT", 80), text_color="#00ffff").pack(pady=80)
     ctk.CTkLabel(login_win, text="Draw. Share. Inspire.", font=("Helvetica", 18), text_color="#888888").pack(pady=10)
@@ -90,9 +104,11 @@ def open_main_window():
     global current_user, current_user_id
     main = ctk.CTk()
     main.title("PALETTE")
-    main.geometry("1280x700")
+    main.geometry("1280x800")
     main.resizable(True, True)
-    main.configure(fg_color="#0f172a")  # Same as login
+    main.configure(fg_color="#0f172a") 
+    main.iconbitmap("Assets/palette_icon.ico")
+
 
     # Configure main window grid
     main.grid_columnconfigure(0, weight=1)
