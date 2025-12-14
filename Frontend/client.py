@@ -35,7 +35,7 @@ def open_login_window():
     global current_user, current_user_id
     login_win = ctk.CTk()
     login_win.title("PALETTE - Welcome")
-    login_win.geometry("500x800")
+    login_win.geometry("500x815")
     login_win.configure(fg_color="#0f0f1f")
     login_win.resizable(False, False)
 
@@ -47,7 +47,7 @@ def open_login_window():
     frame.configure(border_width=2, border_color="#00ffff")
 
     mode = ctk.StringVar(value="login")
-    ctk.CTkLabel(frame, text="Login or Sign Up", font=("Helvetica", 26, "bold"), text_color="#00ffff").pack(pady=30)
+    ctk.CTkLabel(frame, text="Login / Sign Up", font=("Helvetica", 26, "bold"), text_color="#00ffff").pack(pady=30)
 
     entry_user = ctk.CTkEntry(frame, placeholder_text="Username", width=320, height=55 , corner_radius= 30)
     entry_user.pack(pady=15)
